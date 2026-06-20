@@ -45,6 +45,27 @@ if SERVER then
     local PRESSURE_LIMBS = { "rleg", "lleg", "rarm", "larm" }
     local PRESSURE_TIMES = { 6, 14, 25, 38 }
 
+    local ztrPressureOn = true
+
+    concommand.Add("ztrauma_pressure", function(ply, cmd, args)
+        if IsValid(ply) and not ply:IsAdmin() then
+            ply:PrintMessage(HUD_PRINTCONSOLE, "[ZTrauma] Requires admin.")
+            return
+        end
+        local val = args[1]
+        if val == "0" then
+            ztrPressureOn = false
+        elseif val == "1" then
+            ztrPressureOn = true
+        else
+            local msg = "[ZTrauma] ztrauma_pressure is " .. (ztrPressureOn and "1 (enabled)" or "0 (disabled)") .. ". Usage: ztrauma_pressure <0|1>"
+            if IsValid(ply) then print(msg) end
+            return
+        end
+        local msg = "[ZTrauma] Underwater pressure damage " .. (ztrPressureOn and "ENABLED" or "DISABLED") .. "."
+        if IsValid(ply) then print(msg) end
+    end)
+
     hook.Add("Org Think", "ZTrauma_ScubaBreath", function(owner, org, timeValue)
         if not owner:GetNWBool("HasScubaSuit", false) then return end
         if not org.o2 then return end
@@ -52,6 +73,7 @@ if SERVER then
     end)
 
     hook.Add("Think", "ZTrauma_UnderwaterThink", function()
+        if not ztrPressureOn then return end
         local t = CurTime()
         for _, ply in player.Iterator() do
             if not ply:Alive() then
@@ -65,6 +87,8 @@ if SERVER then
             end
 
             if ply:GetNWBool("HasScubaSuit", false) then continue end
+            if ply:GetMoveType() == MOVETYPE_NOCLIP then ply.ztrSubStart = nil continue end
+            if ply.SubRole == "traitor_strangler" then ply.ztrSubStart = nil continue end
 
             local org = ply.organism
             if not org then continue end
